@@ -113,6 +113,11 @@ class Cropper:
     * `resize`: `bool`, default=`True`
         - Resizes the image to the specified width and height,
         otherwise, returns the original image pixels.
+        gamma to 0.9.
+    * `minface`: `int`, default=`-1`
+        - If set to > 0, then minimal face size in pixels will
+        be searched in provided image. If <= 0, MINFACE constant
+        will be used to compute minface param from image dimensions
     """
 
     def __init__(
@@ -123,12 +128,14 @@ class Cropper:
         padding=None,
         fix_gamma=True,
         resize=True,
+        minface=-1,
     ):
         self.height = check_positive_scalar(height)
         self.width = check_positive_scalar(width)
         self.aspect_ratio = width / height
         self.gamma = fix_gamma
         self.resize = resize
+        self.minface = minface
 
         # Face percent
         if face_percent > 100 or face_percent < 1:
@@ -172,7 +179,10 @@ class Cropper:
             img_height, img_width = image.shape[:2]
         except AttributeError:
             raise ImageReadError
-        minface = int(np.sqrt(img_height**2 + img_width**2) / MINFACE)
+        if minface <= 0:
+            minface = int(np.sqrt(img_height**2 + img_width**2) / MINFACE)
+        else:
+            minface = self.minface
 
         # Create the haar cascade
         face_cascade = cv2.CascadeClassifier(self.casc_path)
