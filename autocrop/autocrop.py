@@ -118,6 +118,8 @@ class Cropper:
         - If set to > 0, then minimal face size in pixels will
         be searched in provided image. If <= 0, MINFACE constant
         will be used to compute minface param from image dimensions
+    * `convert_bgr_to_rgb`: `bool`, default=`True`
+        - Convert colors order on output image
     """
 
     def __init__(
@@ -129,6 +131,7 @@ class Cropper:
         fix_gamma=True,
         resize=True,
         minface=-1,
+        convert_bgr_to_rgb=True,
     ):
         self.height = check_positive_scalar(height)
         self.width = check_positive_scalar(width)
@@ -136,6 +139,7 @@ class Cropper:
         self.gamma = fix_gamma
         self.resize = resize
         self.minface = minface
+        self.convert_bgr_to_rgb = convert_bgr_to_rgb
 
         # Face percent
         if face_percent > 100 or face_percent < 1:
@@ -179,7 +183,7 @@ class Cropper:
             img_height, img_width = image.shape[:2]
         except AttributeError:
             raise ImageReadError
-        if minface <= 0:
+        if self.minface <= 0:
             minface = int(np.sqrt(img_height**2 + img_width**2) / MINFACE)
         else:
             minface = self.minface
@@ -222,7 +226,11 @@ class Cropper:
         # Underexposition fix
         if self.gamma:
             image = check_underexposed(image, gray)
-        return bgr_to_rbg(image)
+
+        if self.convert_bgr_to_rgb:
+            return bgr_to_rbg(image)
+        else:
+            return image
 
     def _determine_safe_zoom(self, imgh, imgw, x, y, w, h):
         """
@@ -270,9 +278,7 @@ class Cropper:
         # Find out what zoom factor to use given self.aspect_ratio
         corners = itertools.product((x, x + w), (y, y + h))
         center = np.array([x + int(w / 2), y + int(h / 2)])
-        i = np.array(
-            [(0, 0), (0, imgh), (imgw, imgh), (imgw, 0), (0, 0)]
-        )  # image_corners
+        i = np.array([(0, 0), (0, imgh), (imgw, imgh), (imgw, 0), (0, 0)])  # image_corners
         image_sides = [(i[n], i[n + 1]) for n in range(4)]
 
         corner_ratios = [self.face_percent]  # Hopefully we use this one
